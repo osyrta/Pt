@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paladin transformation time</title>
+<style>
+  :root {
+    --ink: #10203a;
+    --ink-2: #4a5a74;
+    --ink-3: #8a97ad;
+    --paper: #f6f7fa;
+    --field: #ffffff;
+    --line: #cfd6e2;
+    --mithril: #2f5f9e;
+    --warn: #8a5a12;
+    --warn-bg: #fbf1dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8edf5;
+      --ink-2: #aeb9cc;
+      --ink-3: #6f7d95;
+      --paper: #0f1622;
+      --field: #172130;
+      --line: #2c3a52;
+      --mithril: #7fb0ee;
+      --warn: #f0c377;
+      --warn-bg: #2a2110;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.55;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+  h1 { font-size: 1.35rem; font-weight: 400; margin: 0 0 0.25rem; letter-spacing: 0.01em; }
+  .sub { color: var(--ink-2); margin: 0 0 2.25rem; font-size: 0.95rem; }
+
+  .readout {
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 1.25rem 0 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .readout output {
+    font-size: 4.25rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--mithril);
+  }
+  .readout .secs { color: var(--ink-2); font-size: 1rem; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  label { display: block; font-size: 0.9rem; color: var(--ink-2); margin-bottom: 0.35rem; }
+  input, select {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.55rem 0.7rem;
+    font-variant-numeric: tabular-nums;
+  }
+  input:focus-visible, select:focus-visible { outline: 2px solid var(--mithril); outline-offset: 1px; }
+  .full { grid-column: 1 / -1; }
+
+  .breakdown { margin: 1.75rem 0 0; padding: 0; list-style: none; font-size: 0.95rem; }
+  .breakdown li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px dotted var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .breakdown li:last-child { border-bottom: 1px solid var(--ink); }
+  .breakdown span:first-child { color: var(--ink-2); }
+
+  .note {
+    margin-top: 1.5rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--warn-bg);
+    color: var(--warn);
+    border-left: 3px solid var(--warn);
+    font-size: 0.9rem;
+  }
+  .note:empty { display: none; }
+
+  .formula { margin-top: 2.5rem; font-size: 0.85rem; color: var(--ink-3); }
+  .formula code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Paladin transformation time</h1>
+  <p class="sub">Empirical formula fitted to 5100 to 8500 rebirths at age 17.</p>
+
+  <div class="readout">
+    <output id="mmss" for="rb age">13:45</output>
+    <span class="secs"><span id="secs">825</span> seconds</span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label for="rb">Rebirths</label>
+      <input id="rb" type="number" inputmode="numeric" min="0" step="1" value="8500">
+    </div>
+    <div>
+      <label for="age">Age</label>
+      <input id="age" type="number" inputmode="numeric" min="1" max="99" step="1" value="17">
+    </div>
+  </div>
+
+  <ul class="breakdown">
+    <li><span>Base</span><span id="b-base">239</span></li>
+    <li><span>Age penalty</span><span id="b-age">−34</span></li>
+    <li><span>Rebirth bonus, capped tiers</span><span id="b-cap">+243</span></li>
+    <li><span>Rebirth bonus, 2/45 s per rebirth</span><span id="b-flat">+377.78</span></li>
+    <li><span>Floor</span><span id="b-total">825</span></li>
+  </ul>
+
+  <div class="note" id="note"></div>
+
+  <p class="formula">
+    <code>floor(239 − 2 × min(age, 25) + 243 + 2 × rebirths ÷ 45)</code><br>
+    Source: 35 measured points, integer deltas of 4 and 5 seconds in a period-9 cycle, which fixes the slope at exactly 4/9 s per 100 rebirths.
+  </p>
+</main>
+
+<script>
+(function () {
+  var rb = document.getElementById('rb');
+  var age = document.getElementById('age');
+  var el = function (id) { return document.getElementById(id); };
+
+  function fmt(n, d) { return (n < 0 ? '−' : '+') + Math.abs(n).toFixed(d); }
+
+  function calc() {
+    var R = parseInt(rb.value, 10);
+    var A = parseInt(age.value, 10);
+    var base = 239;
+
+    if (isNaN(R) || R < 0 || isNaN(A) || A < 1) {
+      el('mmss').textContent = '--:--';
+      el('secs').textContent = '--';
+      el('note').textContent = 'Enter a rebirth count of 0 or more and an age of 1 or more.';
+      return;
+    }
+
+    var agePen = 2 * Math.min(A, 25);
+    var flat = (2 * R) / 45;
+    var raw = base - agePen + 243 + flat;
+    var T = Math.floor(raw);
+    var m = Math.floor(T / 60);
+    var s = T % 60;
+
+    el('mmss').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    el('secs').textContent = String(T);
+    el('b-base').textContent = String(base);
+    el('b-age').textContent = fmt(-agePen, 0);
+    el('b-cap').textContent = '+243';
+    el('b-flat').textContent = fmt(flat, 2);
+    el('b-total').textContent = String(T);
+
+    var msg = [];
+    if (R < 5100) msg.push('Below 5100 rebirths the 243 s capped term is untested. The real value is lower there, since that term is the sum of steeper early tiers whose boundaries are unknown.');
+    if (A !== 17) msg.push('The 2 s per year age penalty is taken from the wiki and has not been verified at high rebirth counts.');
+    el('note').textContent = msg.join(' ');
+  }
+
+  rb.addEventListener('input', calc);
+  age.addEventListener('input', calc);
+  calc();
+})();
+</script>
+</body>
+</html>
